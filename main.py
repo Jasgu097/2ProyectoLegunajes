@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import ttk  # Para usar Scrollbar más fácilmente
 
 # Se importan las clases a utilizar
 from prue1 import Parser
@@ -11,30 +12,56 @@ from prue1 import lex
 root = tk.Tk()
 root.title("Analizador Léxico y Sintáctico")
 
+# Hacer que la ventana sea redimensionable
+root.geometry("600x400")  # Puedes ajustar el tamaño inicial aquí
+root.resizable(True, True)  # Permitir que la ventana se redimensione
+
+# Crear un frame con scrollbar para el contenido
+main_frame = ttk.Frame(root)
+main_frame.pack(fill=tk.BOTH, expand=True)
+
+# Añadir un canvas para incluir el scrollbar
+canvas = tk.Canvas(main_frame)
+scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+scrollable_frame = ttk.Frame(canvas)
+
+# Conectar el canvas con el scrollbar
+scrollable_frame.bind(
+    "<Configure>",
+    lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+)
+
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+canvas.configure(yscrollcommand=scrollbar.set)
+
+# Empaquetar el canvas y el scrollbar
+canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
 # Crear el área de texto para ingresar el código
-code_input_label = tk.Label(root, text="Introduce el código:")
+code_input_label = tk.Label(scrollable_frame, text="Introduce el código:")
 code_input_label.pack()
 
-code_input = tk.Text(root, height=10, width=50)
+code_input = tk.Text(scrollable_frame, height=10, width=50)
 code_input.pack()
 
 # Crear áreas de texto para mostrar resultados
-lexical_output_label = tk.Label(root, text="Resultado Léxico (Tokens):")
+lexical_output_label = tk.Label(scrollable_frame, text="Resultado Léxico (Tokens):")
 lexical_output_label.pack()
 
-lexical_output = tk.Text(root, height=10, width=50, state=tk.DISABLED)
+lexical_output = tk.Text(scrollable_frame, height=10, width=50, state=tk.DISABLED)
 lexical_output.pack()
 
-ast_output_label = tk.Label(root, text="Árbol Sintáctico (AST):")
+ast_output_label = tk.Label(scrollable_frame, text="Árbol Sintáctico (AST):")
 ast_output_label.pack()
 
-ast_output = tk.Text(root, height=10, width=50, state=tk.DISABLED)
+ast_output = tk.Text(scrollable_frame, height=10, width=50, state=tk.DISABLED)
 ast_output.pack()
 
-semantic_output_label = tk.Label(root, text="Resultado Semántico:")
+semantic_output_label = tk.Label(scrollable_frame, text="Resultado Semántico:")
 semantic_output_label.pack()
 
-semantic_output = tk.Text(root, height=10, width=50, state=tk.DISABLED)
+semantic_output = tk.Text(scrollable_frame, height=10, width=50, state=tk.DISABLED)
 semantic_output.pack()
 
 
@@ -66,36 +93,28 @@ def analyze_code():
 # Funciones para mostrar los resultados
 def display_lexical(tokens):
     lexical_output.config(state=tk.NORMAL)
-    lexical_output.delete("1.0", tk.END)
-    for token in tokens:
-        lexical_output.insert(tk.END, f"{token}\n")
+    lexical_output.delete(1.0, tk.END)
+    lexical_output.insert(tk.END, str(tokens))
     lexical_output.config(state=tk.DISABLED)
 
 
-def display_ast(node, indent=""):
+def display_ast(ast):
     ast_output.config(state=tk.NORMAL)
-    ast_output.delete("1.0", tk.END)
-    _display_ast_recursive(node, indent)
+    ast_output.delete(1.0, tk.END)
+    ast_output.insert(tk.END, str(ast))
     ast_output.config(state=tk.DISABLED)
-
-
-def _display_ast_recursive(node, indent=""):
-    ast_output.insert(tk.END, f"{indent}{node.type}: {node.value}\n")
-    for child in node.children:
-        _display_ast_recursive(child, indent + "  ")
 
 
 def display_semantic(symbol_table):
     semantic_output.config(state=tk.NORMAL)
-    semantic_output.delete("1.0", tk.END)
-    for var, var_type in symbol_table.items():
-        semantic_output.insert(tk.END, f"Variable '{var}' asignada con tipo {var_type}\n")
+    semantic_output.delete(1.0, tk.END)
+    semantic_output.insert(tk.END, str(symbol_table))
     semantic_output.config(state=tk.DISABLED)
 
 
-# Botón para el análisis
-analyze_button = tk.Button(root, text="Analizar", command=analyze_code)
+# Crear el botón para ejecutar el análisis
+analyze_button = tk.Button(scrollable_frame, text="Analizar", command=analyze_code)
 analyze_button.pack()
 
-# Inicia la interfaz
+# Ejecutar la ventana principal
 root.mainloop()
