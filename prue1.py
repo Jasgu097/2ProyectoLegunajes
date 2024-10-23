@@ -43,8 +43,7 @@ codigo_fuente = "variable1 = 42 + 8;"
 
 # Probar el escáner léxico
 tokens = lex(codigo_fuente)
-print(tokens)
-
+print("Tokens:", tokens)
 
 
 # Nodo básico del AST
@@ -77,6 +76,8 @@ class Parser:
         elif token[0] == 'IDENTIFIER':
             self.eat('IDENTIFIER')
             return ASTNode('IDENTIFIER', token[1])
+        else:
+            raise SyntaxError(f'Error de sintaxis inesperado: {token[1]}')
 
     def term(self):
         node = self.factor()
@@ -84,12 +85,29 @@ class Parser:
             operator_token = self.current_token()
             self.eat('OPERATOR')
             right = self.factor()
-            node = ASTNode('OPERATION', operator_token[1])
-            node.children = [node, right]
+            new_node = ASTNode('OPERATION', operator_token[1])
+            new_node.children = [node, right]
+            node = new_node
         return node
 
+    def assignment(self):
+        # Reconoce una asignación
+        identifier = self.current_token()
+        if identifier[0] == 'IDENTIFIER':
+            left = ASTNode('IDENTIFIER', identifier[1])
+            self.eat('IDENTIFIER')
+            self.eat('ASSIGN')
+            right = self.term()
+            assign_node = ASTNode('ASSIGN', '=')
+            assign_node.children = [left, right]
+            return assign_node
+        else:
+            raise SyntaxError("Se esperaba un identificador para la asignación")
+
     def parse(self):
-        return self.term()
+        node = self.assignment()
+        self.eat('SEMICOLON')  # Comer el punto y coma al final
+        return node
 
 # Ejecutar el parser con los tokens generados anteriormente
 parser = Parser(tokens)
@@ -101,10 +119,12 @@ def print_ast(node, indent=""):
     for child in node.children:
         print_ast(child, indent + "  ")
 
+
+print("AST:")
 print_ast(ast)
 
 
-
+# Análisis semántico
 class SemanticAnalyzer:
     def __init__(self):
         self.symbol_table = {}  # Tabla de símbolos para almacenar variables
@@ -115,7 +135,12 @@ class SemanticAnalyzer:
                 raise NameError(f"Variable '{node.value}' no declarada.")
         elif node.type == 'ASSIGN':
             var_name = node.children[0].value
-            self.symbol_table[var_name] = node.children[1].type
+            self.symbol_table[var_name] = node.children[1].type  # Almacena el tipo de la variable
+            print(f"Variable '{var_name}' asignada con valor de tipo {node.children[1].type}")
+        elif node.type == 'OPERATION':
+            for child in node.children:
+                self.analyze(child)
+
 
 # Simular el análisis semántico en un AST
 semantic_analyzer = SemanticAnalyzer()
