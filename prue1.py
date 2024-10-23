@@ -105,10 +105,96 @@ class Parser:
         else:
             raise SyntaxError("Se esperaba un identificador para la asignación")
 
+    def condition(self):
+        """Reconoce y procesa una condición 'if'."""
+        self.eat('IF')
+        self.eat('OPEN_PAREN')  # Espera un paréntesis de apertura
+        condition_expr = self.term()  # La condición es una expresión
+        self.eat('CLOSE_PAREN')  # Espera un paréntesis de cierre
+        self.eat('OPEN_BRACE')  # Cuerpo del if entre llaves
+        if_body = self.assignment()  # Otras estructuras se pueden añadir aquí
+        self.eat('CLOSE_BRACE')
+
+        if_node = ASTNode('IF', None)
+        if_node.children = [condition_expr, if_body]
+        return if_node
+
+    def while_loop(self):
+        """Reconoce y procesa un bucle 'while'."""
+        self.eat('WHILE')
+        self.eat('OPEN_PAREN')
+        condition_expr = self.term()
+        self.eat('CLOSE_PAREN')
+        self.eat('OPEN_BRACE')
+        while_body = self.assignment()  # Otras instrucciones
+        self.eat('CLOSE_BRACE')
+
+        while_node = ASTNode('WHILE', None)
+        while_node.children = [condition_expr, while_body]
+        return while_node
+
+    def function_declaration(self):
+        """Reconoce y procesa una declaración de función."""
+        self.eat('FUNCTION')
+        func_name = self.current_token()
+        self.eat('IDENTIFIER')
+        self.eat('OPEN_PAREN')
+
+        params = []
+        while self.current_token()[0] != 'CLOSE_PAREN':
+            params.append(self.current_token())
+            self.eat('IDENTIFIER')
+            if self.current_token()[0] == 'COMMA':
+                self.eat('COMMA')
+
+        self.eat('CLOSE_PAREN')
+        self.eat('OPEN_BRACE')
+        func_body = self.assignment()  # Podrías agregar un ciclo aquí para más instrucciones
+        self.eat('CLOSE_BRACE')
+
+        func_node = ASTNode('FUNC_DECL', func_name[1])
+        func_node.children = [params, func_body]
+        return func_node
+
     def parse(self):
-        node = self.assignment()
-        self.eat('SEMICOLON')  # Comer el punto y coma al final
-        return node
+        # Añadir la detección de funciones
+        if self.current_token()[0] == 'FUNCTION':
+            return self.function_declaration()
+        elif self.current_token()[0] == 'IF':
+            return self.condition()
+        elif self.current_token()[0] == 'WHILE':
+            return self.while_loop()
+        else:
+            return self.assignment()  # Por ahora mantenemos asignaciones simples
+class SemanticAnalyzer:
+    def __init__(self):
+        self.symbol_table = {}  # Tabla de símbolos para almacenar variables y funciones
+
+    def analyze(self, node):
+        if node.type == 'IDENTIFIER':
+            if node.value not in self.symbol_table:
+                raise NameError(f"Variable '{node.value}' no declarada.")
+        elif node.type == 'ASSIGN':
+            var_name = node.children[0].value
+            self.symbol_table[var_name] = node.children[1].type  # Almacena el tipo de la variable
+            print(f"Variable '{var_name}' asignada con valor de tipo {node.children[1].type}")
+        elif node.type == 'OPERATION':
+            for child in node.children:
+                self.analyze(child)
+        elif node.type == 'IF':
+            # Verificar la validez de la condición
+            self.analyze(node.children[0])  # Evaluar la expresión condicional
+            self.analyze(node.children[1])  # Evaluar el cuerpo del if
+        elif node.type == 'WHILE':
+            # Verificar la validez de la condición en el bucle
+            self.analyze(node.children[0])
+            self.analyze(node.children[1])
+        elif node.type == 'FUNC_DECL':
+            # Verificar declaración de funciones
+            func_name = node.value
+            params = node.children[0]
+            self.symbol_table[func_name] = {'params': params, 'body': node.children[1]}  # Guardar función en la tabla
+            print(f"Función '{func_name}' declarada con {len(params)} parámetros.")
 
 # Ejecutar el parser con los tokens generados anteriormente
 parser = Parser(tokens)
