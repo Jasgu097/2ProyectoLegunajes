@@ -1,5 +1,6 @@
 import re
 
+
 # Definir los patrones para identificar tokens
 token_patterns = [
     (r'[ \t\n]+', None),  # Ignorar espacios en blanco y tabulaciones
