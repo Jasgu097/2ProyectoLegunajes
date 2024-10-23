@@ -1,8 +1,8 @@
 import re
 
-
 # Definir los patrones para identificar tokens
 token_patterns = [
+    (r'\b(entero|decimal|booleano|cadena|si|sino|mientras|hacer|verdadero|falso)\b','RESERVED'),  # Palabras reservadas
     (r'[ \t\n]+', None),  # Ignorar espacios en blanco y tabulaciones
     (r'#[^\n]*', None),  # Ignorar comentarios
     (r'\d+', 'NUMBER'),  # Números
